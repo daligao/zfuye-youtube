@@ -84,20 +84,31 @@ def fetch_channel_videos(channel, limit=10):
 
 # ── 字幕抓取 ─────────────────────────────────────────────────────────────────
 def fetch_transcript(video_id, max_chars=5000):
+    import traceback
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-        # 兼容新版(>=1.0)和旧版API
+        segs = None
+        # 新版 >= 1.0：实例化后调用 fetch
         try:
-            api = YouTubeTranscriptApi()
-            segs = api.fetch(video_id, languages=["en", "en-US", "en-GB"])
-        except (AttributeError, TypeError):
-            segs = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "en-US", "en-GB"])
+            api  = YouTubeTranscriptApi()
+            segs = api.fetch(video_id)        # 自动选最佳语言
+        except Exception as e1:
+            print(f"  [字幕] 新版API失败: {type(e1).__name__}: {e1}")
+            # 旧版 < 1.0：类方法
+            try:
+                segs = YouTubeTranscriptApi.get_transcript(
+                    video_id, languages=["en", "en-US", "en-GB"])
+            except Exception as e2:
+                print(f"  [字幕] 旧版API失败: {type(e2).__name__}: {e2}")
+
+        if not segs:
+            return ""
         text = " ".join(s["text"] if isinstance(s, dict) else s.text for s in segs)
         text = re.sub(r"\s+", " ", text).strip()
         print(f"  [字幕] {len(text)} 字符")
         return text[:max_chars]
     except Exception as e:
-        print(f"  [字幕] 获取失败: {e}")
+        print(f"  [字幕] 异常: {traceback.format_exc()}")
         return ""
 
 
