@@ -1,0 +1,42 @@
+name: YouTube字幕自动发布
+
+on:
+  schedule:
+    # 每天4篇，间隔6小时
+    - cron: '0 2 * * *'
+    - cron: '0 8 * * *'
+    - cron: '0 14 * * *'
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests youtube-transcript-api
+
+      - name: Publish article
+        env:
+          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+          WP_USER:      ${{ secrets.WP_USER }}
+          WP_APP_PASS:  ${{ secrets.WP_APP_PASS }}
+        run: python yt_publisher.py
+
+      - name: Save log
+        run: |
+          git config user.name "daligao"
+          git config user.email "daligao@users.noreply.github.com"
+          git add data/log.json
+          git diff --staged --quiet || git commit -m "log: 发布 $(date +%Y-%m-%d\ %H:%M)"
+          git pull --rebase origin main
+          git push
