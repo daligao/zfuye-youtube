@@ -86,8 +86,13 @@ def fetch_channel_videos(channel, limit=10):
 def fetch_transcript(video_id, max_chars=5000):
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-        segs = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "en-US", "en-GB"])
-        text = " ".join(s["text"] for s in segs)
+        # 兼容新版(>=1.0)和旧版API
+        try:
+            api = YouTubeTranscriptApi()
+            segs = api.fetch(video_id, languages=["en", "en-US", "en-GB"])
+        except (AttributeError, TypeError):
+            segs = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "en-US", "en-GB"])
+        text = " ".join(s["text"] if isinstance(s, dict) else s.text for s in segs)
         text = re.sub(r"\s+", " ", text).strip()
         print(f"  [字幕] {len(text)} 字符")
         return text[:max_chars]
