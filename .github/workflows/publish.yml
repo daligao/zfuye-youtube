@@ -27,9 +27,11 @@ jobs:
 
       - name: Publish article
         env:
-          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
-          WP_USER:      ${{ secrets.WP_USER }}
-          WP_APP_PASS:  ${{ secrets.WP_APP_PASS }}
+          DEEPSEEK_KEY:  ${{ secrets.DEEPSEEK_KEY }}
+          WP_USER:       ${{ secrets.WP_USER }}
+          WP_APP_PASS:   ${{ secrets.WP_APP_PASS }}
+          WEBSHARE_USER: ${{ secrets.WEBSHARE_USER }}
+          WEBSHARE_PASS: ${{ secrets.WEBSHARE_PASS }}
         run: python yt_publisher.py
 
       - name: Save log

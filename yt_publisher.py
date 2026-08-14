@@ -8,9 +8,11 @@ import xml.etree.ElementTree as ET
 from html import unescape
 from base64 import b64encode
 
-DEEPSEEK_KEY = os.environ.get("DEEPSEEK_KEY", "")
-WP_USER      = os.environ.get("WP_USER", "")
-WP_APP_PASS  = os.environ.get("WP_APP_PASS", "")
+DEEPSEEK_KEY   = os.environ.get("DEEPSEEK_KEY", "")
+WP_USER        = os.environ.get("WP_USER", "")
+WP_APP_PASS    = os.environ.get("WP_APP_PASS", "")
+WEBSHARE_USER  = os.environ.get("WEBSHARE_USER", "")
+WEBSHARE_PASS  = os.environ.get("WEBSHARE_PASS", "")
 WP_BASE      = "https://www.zfuye.org/wp-json/wp/v2"
 
 TODAY    = datetime.date.today().isoformat()
@@ -84,31 +86,21 @@ def fetch_channel_videos(channel, limit=10):
 
 # ── 字幕抓取 ─────────────────────────────────────────────────────────────────
 def fetch_transcript(video_id, max_chars=5000):
-    import traceback
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-        segs = None
-        # 新版 >= 1.0：实例化后调用 fetch
-        try:
-            api  = YouTubeTranscriptApi()
-            segs = api.fetch(video_id)        # 自动选最佳语言
-        except Exception as e1:
-            print(f"  [字幕] 新版API失败: {type(e1).__name__}: {e1}")
-            # 旧版 < 1.0：类方法
-            try:
-                segs = YouTubeTranscriptApi.get_transcript(
-                    video_id, languages=["en", "en-US", "en-GB"])
-            except Exception as e2:
-                print(f"  [字幕] 旧版API失败: {type(e2).__name__}: {e2}")
-
-        if not segs:
-            return ""
-        text = " ".join(s["text"] if isinstance(s, dict) else s.text for s in segs)
+        from youtube_transcript_api.proxies import WebshareProxyConfig
+        proxy_cfg = WebshareProxyConfig(
+            proxy_username=WEBSHARE_USER,
+            proxy_password=WEBSHARE_PASS,
+        ) if WEBSHARE_USER else None
+        api  = YouTubeTranscriptApi(proxy_config=proxy_cfg)
+        segs = api.fetch(video_id)
+        text = " ".join(s.text if hasattr(s, "text") else s["text"] for s in segs)
         text = re.sub(r"\s+", " ", text).strip()
         print(f"  [字幕] {len(text)} 字符")
         return text[:max_chars]
     except Exception as e:
-        print(f"  [字幕] 异常: {traceback.format_exc()}")
+        print(f"  [字幕] 获取失败: {type(e).__name__}: {e}")
         return ""
 
 
